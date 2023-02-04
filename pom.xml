@@ -283,7 +283,6 @@
             <scope>test</scope>
         </dependency>
 
-
         <!--
         For some reason JavaDoc crashed during site generation unless we have this dependency
         -->
@@ -377,6 +376,12 @@
             <version>${logback-classic.version}</version>
         </dependency>
 
+        <!-- This enables OAuth2 flow -->
+        <!-- <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+            <version>${spring_boot_version}</version>
+        </dependency> -->
     </dependencies>
 
     <build>
@@ -551,6 +556,19 @@
                     </ignoredResourcePatterns>
                 </configuration>
             </plugin>
+
+            <!-- Uncomment this plugin to enable auto reload of the Jetty server upon changes in the code.
+                Not to be used in production.
+                Only aplicable when running the server with Jetty (usually 'mvn jetty:run').
+            -->
+            <!-- <plugin>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-maven-plugin</artifactId>
+                <version>9.4.36.v20210114</version>
+                <configuration>
+                    <scanIntervalSeconds>2</scanIntervalSeconds>
+                </configuration>
+            </plugin> -->
         </plugins>
     </build>
 
@@ -597,6 +615,7 @@
                 </dependency>
             </dependencies>
         </profile>
+
         <profile>
             <id>ossrh-repo</id>
             <activation>

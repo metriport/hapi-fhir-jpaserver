@@ -11,6 +11,7 @@ import { Credentials } from "aws-cdk-lib/aws-rds";
 import * as r53 from "aws-cdk-lib/aws-route53";
 import * as r53_targets from "aws-cdk-lib/aws-route53-targets";
 import * as secret from "aws-cdk-lib/aws-secretsmanager";
+import { execSync } from "child_process";
 import { Construct } from "constructs";
 import { EnvConfig } from "./env-config";
 import { isProd, mbToBytes } from "./util";
@@ -23,6 +24,7 @@ interface FHIRServerProps extends StackProps {
 export class FHIRServerStack extends Stack {
   readonly vpc: ec2.IVpc;
   readonly zone: r53.IHostedZone;
+  readonly commitSHA: string | undefined;
 
   constructor(scope: Construct, id: string, props: FHIRServerProps) {
     super(scope, id, props);
@@ -35,6 +37,13 @@ export class FHIRServerStack extends Stack {
       domainName: props.config.zone,
       privateZone: true,
     });
+    try {
+      this.commitSHA = execSync("git rev-parse --short=10 HEAD", {
+        encoding: "utf-8",
+      });
+    } catch (err) {
+      console.log(`Could not determine the commit SHA, using 'latest': `, err);
+    }
 
     //-------------------------------------------
     // Aurora Database

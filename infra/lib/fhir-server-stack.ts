@@ -166,10 +166,10 @@ export class FHIRServerStack extends Stack {
         },
         healthCheckGracePeriod: Duration.seconds(60),
         publicLoadBalancer: false,
-        runtimePlatform: {
-          cpuArchitecture: ecs.CpuArchitecture.ARM64,
-          operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
-        },
+        // runtimePlatform: {
+        //   cpuArchitecture: ecs.CpuArchitecture.ARM64,
+        //   operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
+        // },
       }
     );
 

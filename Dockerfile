@@ -1,7 +1,7 @@
 FROM --platform=linux/arm64/v8 maven:3.9-eclipse-temurin-17 as build-fhir
 WORKDIR /tmp/hapi-fhir-jpaserver-starter
 
-RUN curl -LSsO https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.17.0/opentelemetry-javaagent.jar
+RUN curl -vLSsO https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.17.0/opentelemetry-javaagent.jar
 
 COPY pom.xml .
 COPY server.xml .

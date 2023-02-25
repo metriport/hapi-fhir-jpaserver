@@ -5,6 +5,10 @@ name: Java CI with Maven
 
 on:
   push:
+    # these already get compiled on the respective "deploy-<env>.yml" workflow definition
+    branches-ignore:
+      - develop
+      - master
   workflow_dispatch:
 
 jobs:

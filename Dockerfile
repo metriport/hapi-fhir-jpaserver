@@ -1,8 +1,9 @@
 # Add "--platform=linux/amd64" after "FROM" below if running this on a Mac/ARM based computer
-FROM maven:3.9-eclipse-temurin-17 as build-fhir
+FROM --platform=linux/amd64 maven:3.9-eclipse-temurin-17 as build-fhir
 WORKDIR /tmp/hapi-fhir-jpaserver-starter
 
-RUN curl -LSsO https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.17.0/opentelemetry-javaagent.jar
+ARG OPENTELEMETRY_JAVA_AGENT_VERSION=1.17.0
+RUN curl -LSsO https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${OPENTELEMETRY_JAVA_AGENT_VERSION}/opentelemetry-javaagent.jar
 
 COPY pom.xml .
 COPY server.xml .

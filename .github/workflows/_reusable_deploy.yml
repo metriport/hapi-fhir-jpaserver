@@ -26,12 +26,15 @@ jobs:
     # TODO Consider the solution here: https://github.com/tj-actions/aws-cdk/blob/main/action.yml
     concurrency:
       group: ${{ format('{0}-{1}', github.workflow, github.job) }}
-    runs-on: buildjet-2vcpu-ubuntu-2204-arm
+    runs-on: ubuntu-latest
+    # runs-on: buildjet-2vcpu-ubuntu-2204-arm
     environment: ${{ inputs.deploy_env }}
     defaults:
       run:
         working-directory: "./infra"
     steps:
+      # Allows building ARM on x86 machines - https://github.com/qemu/qemu
+      - uses: docker/setup-qemu-action@v2
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
@@ -55,12 +58,12 @@ jobs:
         run: npm ci --ignore-scripts
 
       # TODO MOVE TO DEPLOY-WITH-CDK https://github.com/metriport/deploy-with-cdk/
-      - name: Install AWS CLI
-        run: |
-          echo "Installing AWS CLI ..."
-          "curl -O 'https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip'"
-          unzip awscli-exe-linux-aarch64.zip
-          ./aws/install
+      # - name: Install AWS CLI
+      #   run: |
+      #     echo "Installing AWS CLI ..."
+      #     "curl -O 'https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip'"
+      #     unzip awscli-exe-linux-aarch64.zip
+      #     ./aws/install
 
       # CDK DIFF
       - name: Diff CDK stack

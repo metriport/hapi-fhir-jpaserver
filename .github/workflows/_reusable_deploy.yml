@@ -54,6 +54,14 @@ jobs:
       - name: Install NodeJS dependencies
         run: npm ci --ignore-scripts
 
+      # TODO MOVE TO DEPLOY-WITH-CDK https://github.com/metriport/deploy-with-cdk/
+      - name: Install AWS CLI
+        run: |
+          echo "Installing AWS CLI ..."
+          "curl -O 'https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip'"
+          unzip awscli-exe-linux-aarch64.zip
+          ./aws/install
+
       # CDK DIFF
       - name: Diff CDK stack
         uses: metriport/deploy-with-cdk@master

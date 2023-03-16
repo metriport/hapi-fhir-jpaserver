@@ -2,7 +2,6 @@ import { Aspects, CfnOutput, Duration, Stack, StackProps } from "aws-cdk-lib";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceType } from "aws-cdk-lib/aws-ec2";
-import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as ecs_patterns from "aws-cdk-lib/aws-ecs-patterns";
@@ -11,9 +10,9 @@ import { Credentials } from "aws-cdk-lib/aws-rds";
 import * as r53 from "aws-cdk-lib/aws-route53";
 import * as r53_targets from "aws-cdk-lib/aws-route53-targets";
 import * as secret from "aws-cdk-lib/aws-secretsmanager";
-import { execSync } from "child_process";
 import { Construct } from "constructs";
 import { EnvConfig } from "./env-config";
+import { FHIR_DB_SECRET_NAME } from "./fhir-secrets-stack";
 import { isProd, mbToBytes } from "./util";
 
 interface FHIRServerProps extends StackProps {
@@ -66,19 +65,17 @@ export class FHIRServerStack extends Stack {
 
   private setupDB(props: FHIRServerProps): {
     dbCluster: rds.IDatabaseCluster;
-    dbCreds: { username: string; password: secret.Secret };
+    dbCreds: { username: string; password: secret.ISecret };
   } {
     // create database credentials
     const dbClusterName = "fhir-server";
     const dbName = props.config.dbName;
     const dbUsername = props.config.dbUsername;
-    const dbPasswordSecret = new secret.Secret(this, "FHIRServerDBPassword", {
-      secretName: "FHIRServerDBPassword",
-      generateSecretString: {
-        excludePunctuation: true,
-        includeSpace: false,
-      },
-    });
+    const dbPasswordSecret = secret.Secret.fromSecretNameV2(
+      this,
+      FHIR_DB_SECRET_NAME,
+      FHIR_DB_SECRET_NAME
+    );
     const dbCreds = Credentials.fromPassword(
       dbUsername,
       dbPasswordSecret.secretValue
@@ -124,7 +121,7 @@ export class FHIRServerStack extends Stack {
   private setupFargateService(
     props: FHIRServerProps,
     dbCluster: rds.IDatabaseCluster,
-    dbCreds: { username: string; password: secret.Secret }
+    dbCreds: { username: string; password: secret.ISecret }
   ): ecs_patterns.NetworkLoadBalancedFargateService {
     // Create a new Amazon Elastic Container Service (ECS) cluster
     const cluster = new ecs.Cluster(this, "FHIRServerCluster", {

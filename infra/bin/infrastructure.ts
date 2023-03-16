@@ -4,8 +4,10 @@ import "source-map-support/register";
 import { EnvConfig } from "../lib/env-config";
 import { EnvType } from "../lib/env-type";
 import { FHIRServerStack } from "../lib/fhir-server-stack";
+import { FHIRSecretsStack } from "../lib/fhir-secrets-stack";
 
 const app = new cdk.App();
+
 //-------------------------------------------
 // Parse config based on specified env
 //-------------------------------------------
@@ -40,6 +42,11 @@ async function deploy() {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: config.region,
   };
+
+  //---------------------------------------------------------------------------------
+  // Deploy the secrets stack.
+  //---------------------------------------------------------------------------------
+  new FHIRSecretsStack(app, "FHIRSecretsStack", { env, config });
 
   //---------------------------------------------------------------------------------
   // Deploy the FHIR server stack.

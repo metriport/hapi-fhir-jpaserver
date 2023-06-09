@@ -104,5 +104,10 @@
   "hosted-zone:account=463519787594:domainName=metriport.com:privateZone=true:region=us-west-1": {
     "Id": "/hostedzone/Z091446118MSC1J6ZZKFO",
     "Name": "metriport.com."
-  }
+  },
+  "availability-zones:account=463519787594:region=ca-central-1": [
+    "ca-central-1a",
+    "ca-central-1b",
+    "ca-central-1d"
+  ]
 }

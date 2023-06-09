@@ -2,12 +2,13 @@ import { Aspects, CfnOutput, Duration, Stack, StackProps } from "aws-cdk-lib";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import { SnsAction } from "aws-cdk-lib/aws-cloudwatch-actions";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
-import { InstanceType } from "aws-cdk-lib/aws-ec2";
+import { ClientVpnEndpoint, InstanceType } from "aws-cdk-lib/aws-ec2";
 import * as ecr_assets from "aws-cdk-lib/aws-ecr-assets";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import { FargateService } from "aws-cdk-lib/aws-ecs";
 import * as ecs_patterns from "aws-cdk-lib/aws-ecs-patterns";
 import { Protocol } from "aws-cdk-lib/aws-elasticloadbalancingv2";
+import { LogGroup } from "aws-cdk-lib/aws-logs";
 import * as rds from "aws-cdk-lib/aws-rds";
 import { Credentials } from "aws-cdk-lib/aws-rds";
 import * as r53 from "aws-cdk-lib/aws-route53";
@@ -19,11 +20,11 @@ import { Construct } from "constructs";
 import { EnvConfig } from "./env-config";
 import { getConfig } from "./shared/config";
 import { vCPU } from "./shared/fargate";
-import { isProd, mbToBytes } from "./util";
+import { isProd, isInfra, mbToBytes } from "./util";
 
 export function settings() {
   const config = getConfig();
-  const prod = isProd(config);
+  const prod = isProd(config) || isInfra(config);
   return {
     cpu: prod ? 2 * vCPU : 1 * vCPU,
     memoryLimitMiB: prod ? 4096 : 2048,
@@ -53,6 +54,17 @@ export class FHIRServerStack extends Stack {
     this.vpc = ec2.Vpc.fromLookup(this, "APIVpc", {
       vpcId: props.config.vpcId,
     });
+    // this.vpc = props.config.vpcId
+    //   ? ec2.Vpc.fromLookup(this, "APIVpc", {
+    //       vpcId: props.config.vpcId,
+    //     })
+    //   : new ec2.Vpc(this, "FHIRVpc", {
+    //       flowLogs: {
+    //         apiVPCFlowLogs: { trafficType: ec2.FlowLogTrafficType.REJECT },
+    //       },
+    //       enableDnsHostnames: true,
+    //       enableDnsSupport: true,
+    //     });
     this.zone = r53.HostedZone.fromHostedZoneAttributes(this, "FhirZone", {
       zoneName: props.config.zone.name,
       hostedZoneId: props.config.zone.id,
@@ -77,6 +89,9 @@ export class FHIRServerStack extends Stack {
       dbCreds,
       slackNotification?.alarmAction
     );
+
+    const vpnServerCertArn = props.config.vpnServerCertArn;
+    if (vpnServerCertArn) this.setupVPN(this.vpc, vpnServerCertArn, dbCluster);
 
     //-------------------------------------------
     // Output
@@ -145,8 +160,16 @@ export class FHIRServerStack extends Stack {
       },
     });
 
+    new r53.CnameRecord(this, "FHIRDBCnameRecord", {
+      zone: this.zone,
+      domainName: dbCluster.clusterEndpoint.hostname,
+      recordName: `db.${props.config.subdomain}.${props.config.domain}`,
+    });
+
     // add performance alarms
-    this.addDBClusterPerformanceAlarms(dbCluster, dbClusterName, alarmAction);
+    if (!isInfra(props.config)) {
+      this.addDBClusterPerformanceAlarms(dbCluster, dbClusterName, alarmAction);
+    }
 
     return {
       dbCluster,
@@ -237,27 +260,29 @@ export class FHIRServerStack extends Stack {
     });
 
     // CloudWatch Alarms and Notifications
-    const fargateCPUAlarm = fargateService.service
-      .metricCpuUtilization()
-      .createAlarm(this, "FHIRCPUAlarm", {
-        threshold: 80,
-        evaluationPeriods: 3,
-        datapointsToAlarm: 2,
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-      });
-    alarmAction && fargateCPUAlarm.addAlarmAction(alarmAction);
-    alarmAction && fargateCPUAlarm.addOkAction(alarmAction);
+    if (!isInfra(props.config)) {
+      const fargateCPUAlarm = fargateService.service
+        .metricCpuUtilization()
+        .createAlarm(this, "FHIRCPUAlarm", {
+          threshold: 80,
+          evaluationPeriods: 3,
+          datapointsToAlarm: 2,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        });
+      alarmAction && fargateCPUAlarm.addAlarmAction(alarmAction);
+      alarmAction && fargateCPUAlarm.addOkAction(alarmAction);
 
-    const fargateMemoryAlarm = fargateService.service
-      .metricMemoryUtilization()
-      .createAlarm(this, "FHIRMemoryAlarm", {
-        threshold: 70,
-        evaluationPeriods: 3,
-        datapointsToAlarm: 2,
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-      });
-    alarmAction && fargateMemoryAlarm.addAlarmAction(alarmAction);
-    alarmAction && fargateMemoryAlarm.addOkAction(alarmAction);
+      const fargateMemoryAlarm = fargateService.service
+        .metricMemoryUtilization()
+        .createAlarm(this, "FHIRMemoryAlarm", {
+          threshold: 70,
+          evaluationPeriods: 3,
+          datapointsToAlarm: 2,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        });
+      alarmAction && fargateMemoryAlarm.addAlarmAction(alarmAction);
+      alarmAction && fargateMemoryAlarm.addOkAction(alarmAction);
+    }
 
     // Access grant for Aurora DB
     dbCreds.password.grantRead(fargateService.taskDefinition.taskRole);
@@ -269,17 +294,17 @@ export class FHIRServerStack extends Stack {
       maxCapacity: taskCountMax,
     });
     scaling.scaleOnCpuUtilization("autoscale_cpu", {
-      targetUtilizationPercent: 90,
-      scaleInCooldown: Duration.minutes(2),
+      targetUtilizationPercent: 80,
       scaleOutCooldown: Duration.seconds(30),
+      scaleInCooldown: Duration.minutes(2),
     });
     scaling.scaleOnMemoryUtilization("autoscale_mem", {
-      targetUtilizationPercent: 90,
-      scaleInCooldown: Duration.minutes(2),
+      targetUtilizationPercent: 80,
       scaleOutCooldown: Duration.seconds(30),
+      scaleInCooldown: Duration.minutes(2),
     });
 
-    // allow the NLB to talk to fargate
+    // allow the LB to talk to fargate
     fargateService.service.connections.allowFrom(
       ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
       ec2.Port.allTraffic(),
@@ -372,6 +397,38 @@ export class FHIRServerStack extends Stack {
     );
     alarmAction && writeAlarm.addAlarmAction(alarmAction);
     alarmAction && writeAlarm.addOkAction(alarmAction);
+  }
+  
+  // This should have its own stack on internal
+  private setupVPN(
+    vpc: ec2.IVpc,
+    vpnServerCertArn: string,
+    dbCluster: rds.IDatabaseCluster
+  ): ClientVpnEndpoint {
+    // create Log group: VPN_logs
+    const logGroup = new LogGroup(this, "VPN_logs");
+
+    // create vpn
+    const clientsCIDR = "20.0.0.0/22";
+    const vpn = new ClientVpnEndpoint(this, "local-to-cloud", {
+      description:
+        "VPN to access environment VPC from developer's local environment",
+      vpc,
+      cidr: clientsCIDR,
+      serverCertificateArn: vpnServerCertArn,
+      clientCertificateArn: vpnServerCertArn,
+      splitTunnel: true,
+      logging: true,
+      logGroup,
+    });
+
+    function accessToDB(db: rds.IDatabaseCluster) {
+      // TODO try to be more restrictive when giving access
+      db.connections.allowFrom(vpn, ec2.Port.allTraffic());
+    }
+    accessToDB(dbCluster);
+
+    return vpn;
   }
 }
 

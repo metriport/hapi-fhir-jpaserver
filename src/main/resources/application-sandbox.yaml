@@ -73,7 +73,7 @@ hapi:
     #staticLocation: file:/foo/bar/bazz
     ### enable to set the Server URL
     # ******* IMPORTANT *******
-    # Adjusting server_address requires updating the proxy string replace function in the API Project
+    # Adjusting server_address requires updating the proxy string replace function in packages/api/src/routes/medical/fhir-r4-proxy.ts
     # *************************
     server_address: https://api.sandbox.metriport.com/oauth/fhir
     #    defer_indexing_for_codesystems_of_size: 101

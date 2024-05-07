@@ -1,9 +1,7 @@
 version: "3"
 services:
   fhir-server:
-    build:
-      context: ./
-      dockerfile: ./Dockerfile.dev
+    build: .
     container_name: fhir-server
     depends_on:
       fhir-postgres:

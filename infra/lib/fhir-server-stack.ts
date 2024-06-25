@@ -35,7 +35,7 @@ export function settings() {
   return {
     cpu: isLarge ? 2 * vCPU : 1 * vCPU,
     memoryLimitMiB: isLarge ? 4096 : 2048,
-    taskCountMin: isLarge ? 4 : 1,
+    taskCountMin: isLarge ? 6 : 1,
     taskCountMax: isLarge ? 10 : 5,
     minDBCap: isLarge ? 4 : 1,
     maxDBCap: isLarge ? 32 : 8,

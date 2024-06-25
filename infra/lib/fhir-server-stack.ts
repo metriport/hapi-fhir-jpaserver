@@ -36,7 +36,7 @@ export function settings() {
     cpu: isLarge ? 2 * vCPU : 1 * vCPU,
     memoryLimitMiB: isLarge ? 4096 : 2048,
     taskCountMin: isLarge ? 6 : 1,
-    taskCountMax: isLarge ? 15 : 5,
+    taskCountMax: isLarge ? 10 : 5,
     minDBCap: isLarge ? 4 : 1,
     maxDBCap: isLarge ? 32 : 8,
     minSlowLogDurationInMs: 600, // https://www.postgresql.org/docs/current/runtime-config-logging.html#GUC-LOG-MIN-DURATION-STATEMENT

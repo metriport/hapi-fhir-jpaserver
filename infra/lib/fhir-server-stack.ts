@@ -53,8 +53,8 @@ export function settings(): Settings {
   if (isProd(config)) {
     return {
       ...defaults,
-      cpu: 3 * vCPU,
-      memoryLimitMiB: 4096,
+      cpu: 4 * vCPU,
+      memoryLimitMiB: 8192,
       taskCountMin: 6,
       taskCountMax: 10,
       minDBCap: 10,
@@ -65,7 +65,7 @@ export function settings(): Settings {
     return {
       ...defaults,
       cpu: 1 * vCPU,
-      memoryLimitMiB: 1024,
+      memoryLimitMiB: 2048,
       taskCountMin: 1,
       taskCountMax: 5,
       minDBCap: 3,
@@ -75,7 +75,7 @@ export function settings(): Settings {
   return {
     ...defaults,
     cpu: 1 * vCPU,
-    memoryLimitMiB: 1024,
+    memoryLimitMiB: 2048,
     taskCountMin: 1,
     taskCountMax: 5,
     minDBCap: 0.5,

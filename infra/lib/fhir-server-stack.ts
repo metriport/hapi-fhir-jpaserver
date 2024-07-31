@@ -29,20 +29,57 @@ import { vCPU } from "./shared/fargate";
 import { addDefaultMetricsToTargetGroup } from "./shared/target-group";
 import { isProd, isSandbox, mbToBytes } from "./util";
 
-export function settings() {
+type Settings = {
+  cpu: number;
+  memoryLimitMiB: number;
+  taskCountMin: number;
+  taskCountMax: number;
+  minDBCap: number;
+  maxDBCap: number;
+  /** Causes the duration of each completed statement to be logged if the statement ran for at least the specified amount of time. https://www.postgresql.org/docs/current/runtime-config-logging.html#GUC-LOG-MIN-DURATION-STATEMENT */
+  minSlowLogDurationInMs: number;
+  /** The load balancer idle timeout, in seconds. Can be between 1 and 4000 seconds */
+  maxExecutionTimeout: Duration;
+  listenToPort: number;
+};
+
+export function settings(): Settings {
   const config = getConfig();
-  const isLarge = isProd(config) || isSandbox(config);
-  return {
-    cpu: isLarge ? 2 * vCPU : 1 * vCPU,
-    memoryLimitMiB: isLarge ? 4096 : 2048,
-    taskCountMin: isLarge ? 6 : 1,
-    taskCountMax: isLarge ? 10 : 5,
-    minDBCap: isLarge ? 4 : 1,
-    maxDBCap: isLarge ? 32 : 8,
-    minSlowLogDurationInMs: 600, // https://www.postgresql.org/docs/current/runtime-config-logging.html#GUC-LOG-MIN-DURATION-STATEMENT
-    // The load balancer idle timeout, in seconds. Can be between 1 and 4000 seconds
+  const defaults = {
+    minSlowLogDurationInMs: 600,
     maxExecutionTimeout: Duration.minutes(15),
     listenToPort: 8080,
+  };
+  if (isProd(config)) {
+    return {
+      ...defaults,
+      cpu: 4 * vCPU,
+      memoryLimitMiB: 8192,
+      taskCountMin: 6,
+      taskCountMax: 10,
+      minDBCap: 10,
+      maxDBCap: 48,
+    };
+  }
+  if (isSandbox(config)) {
+    return {
+      ...defaults,
+      cpu: 1 * vCPU,
+      memoryLimitMiB: 2048,
+      taskCountMin: 1,
+      taskCountMax: 5,
+      minDBCap: 3,
+      maxDBCap: 12,
+    };
+  }
+  return {
+    ...defaults,
+    cpu: 1 * vCPU,
+    memoryLimitMiB: 2048,
+    taskCountMin: 1,
+    taskCountMax: 5,
+    minDBCap: 1,
+    maxDBCap: 8,
   };
 }
 
@@ -254,7 +291,9 @@ export class FHIRServerStack extends Stack {
     // See for details: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/target-group-health-checks.html
     fargateService.targetGroup.configureHealthCheck({
       healthyThresholdCount: 2,
-      interval: Duration.seconds(30),
+      unhealthyThresholdCount: 4,
+      interval: Duration.seconds(20),
+      timeout: Duration.seconds(15),
       path: "/",
       port: `${listenToPort}`,
       protocol: Protocol.HTTP,

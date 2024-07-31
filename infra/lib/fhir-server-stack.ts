@@ -53,8 +53,8 @@ export function settings(): Settings {
   if (isProd(config)) {
     return {
       ...defaults,
-      cpu: 2 * vCPU,
-      memoryLimitMiB: 4096,
+      cpu: 4 * vCPU,
+      memoryLimitMiB: 8192,
       taskCountMin: 6,
       taskCountMax: 10,
       minDBCap: 10,
@@ -65,7 +65,7 @@ export function settings(): Settings {
     return {
       ...defaults,
       cpu: 1 * vCPU,
-      memoryLimitMiB: 1024,
+      memoryLimitMiB: 2048,
       taskCountMin: 1,
       taskCountMax: 5,
       minDBCap: 3,
@@ -74,8 +74,8 @@ export function settings(): Settings {
   }
   return {
     ...defaults,
-    cpu: 0.5 * vCPU,
-    memoryLimitMiB: 1024,
+    cpu: 1 * vCPU,
+    memoryLimitMiB: 2048,
     taskCountMin: 1,
     taskCountMax: 5,
     minDBCap: 0.5,
@@ -291,7 +291,9 @@ export class FHIRServerStack extends Stack {
     // See for details: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/target-group-health-checks.html
     fargateService.targetGroup.configureHealthCheck({
       healthyThresholdCount: 2,
-      interval: Duration.seconds(30),
+      unhealthyThresholdCount: 4,
+      interval: Duration.seconds(20),
+      timeout: Duration.seconds(15),
       path: "/",
       port: `${listenToPort}`,
       protocol: Protocol.HTTP,

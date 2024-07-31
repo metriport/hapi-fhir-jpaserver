@@ -78,7 +78,7 @@ export function settings(): Settings {
     memoryLimitMiB: 2048,
     taskCountMin: 1,
     taskCountMax: 5,
-    minDBCap: 0.5,
+    minDBCap: 1,
     maxDBCap: 8,
   };
 }

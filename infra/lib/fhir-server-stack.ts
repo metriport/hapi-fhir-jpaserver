@@ -55,10 +55,10 @@ export function settings(): Settings {
       ...defaults,
       cpu: 4 * vCPU,
       memoryLimitMiB: 8192,
-      taskCountMin: 6,
-      taskCountMax: 10,
-      minDBCap: 10,
-      maxDBCap: 48,
+      taskCountMin: 8,
+      taskCountMax: 20,
+      minDBCap: 15,
+      maxDBCap: 96,
     };
   }
   if (isSandbox(config)) {
